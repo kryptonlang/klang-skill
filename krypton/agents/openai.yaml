@@ -1,0 +1,4 @@
+interface:
+  display_name: "Krypton"
+  short_description: "Write and debug Krypton .k/.ks programs"
+  default_prompt: "Use $krypton to write and test Krypton code. Pair with $caveman for terse output."
