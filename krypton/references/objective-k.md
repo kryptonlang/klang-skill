@@ -65,6 +65,11 @@ executable exists.
 
 ## App-facing API: `k:okui`
 
+For the newer macOS-only column, single/double action, menu-state, image-view,
+frame-persistence, close/open-file/reopen and pending-class safety contracts, read
+[appkit-controls.md](appkit-controls.md). Verify these functions exist in the
+target checkout; the unchanged `2.4.8` version string does not prove availability.
+
 `k:okui` is the preferred app surface. On macOS it pulls in `k:objk`,
 `k:choc_macos`, and `k:okui_core`. On Windows it pulls in `k:objkwin` and
 `k:choc`. App code can often stay on the same words.

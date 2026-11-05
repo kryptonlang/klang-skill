@@ -16,7 +16,8 @@ metadata:
 
 # Krypton
 
-Krypton is a self-hosting language whose runtime values are strings. It
+Krypton is a self-hosting language with string-oriented values and native
+guarded integers, float boxes, and opaque handles. It
 compiles directly to native ELF, PE, or Mach-O. No C compiler is involved
 for normal builds. Current release line: **2.4.x** (2.4.8 on macOS arm64).
 
@@ -41,13 +42,16 @@ or comments.
 
 ## First moves
 
-1. Check the toolchain: `kcc --version` and `command -v kr`.
+1. Resolve the compiler path and inspect its version text. On macOS, prefer
+   `/usr/local/bin/kcc` or the checkout driver: `/usr/bin/kcc` is Apple's
+   unrelated Kerberos tool. Exit status alone does not distinguish them.
 2. If working in a source checkout, set `KRYPTON_ROOT` to that checkout.
 3. Read only the reference needed for the task:
    - Language/syntax: `references/language.md`
    - CLI/build/run: `references/cli.md`
    - Builtins and modules: `references/stdlib.md`
    - Native apps and Objective-K: `references/objective-k.md`
+   - Current macOS controls/events/lifecycle APIs: `references/appkit-controls.md`
    - Failures and version bugs: `references/troubleshooting.md`
 4. Write the smallest program that proves the behavior, then compile and run
    it before editing more code.
@@ -56,8 +60,9 @@ or comments.
 
 ## Non-negotiable rules
 
-- **All values are strings.** `10` is the string `"10"`. Arithmetic parses
-  numeric strings. If either operand is non-numeric, `+` concatenates.
+- **Do not confuse text with native values.** User-facing APIs are often
+  string-oriented, but native backends also carry guarded integers, float
+  boxes, code pointers and object handles. Native handles are not text.
 - **`emit` returns a value.** `return` is an alias. Use `-> do` for no result;
   `-> void` is an error.
 - **Entry point is `just run { ... }`** (or `go run { ... }`). A bare `.ks`
@@ -85,7 +90,9 @@ or comments.
   cannot capture locals. Match the exact callback signature.
 - **2.4.8 ships `k:okui`, `k:objk`, and `k:objk_runtime_macos`.** Checkout-only
   additions include table model/selection hooks, `okOnKeyDown`, live-field
-  changes, `okSegmented`, and `k:objk_process_macos`. Do not promise those on
+  changes, segmented controls, columns, independent table actions, menu/image/
+  frame helpers, window-close/app open-file/reopen hooks, and
+  `k:objk_process_macos`. Do not promise those on
   2.4.8; use the checkout driver or gate the feature.
 
 ## Minimal working program
@@ -152,6 +159,9 @@ just run {
     let pool = okAutoreleasePool()
     let app = okApp()
     let win = okWindow(app, "Objective-K", 460, 160)
+    let bar = okMenuBar(app)
+    let menu = okMenuAdd(bar, "Objective-K")
+    okMenuSelector(menu, "Quit", "q", "terminate:")
     let field = okField(win, 20, 92, 420, 28)
     let label = okLabel(win, "", 20, 44, 420, 28)
     okSet(field, "demo.label", label)
@@ -281,15 +291,19 @@ More detail: `references/language.md`.
 | Lines | `lineCount`, `getLine` |
 | Truth | `isTruthy`, `toStr` |
 
+This table lists names, not platform guarantees. In particular, macOS `sort`
+and padding have known defects; `split` is legacy list indexing, not string
+splitting. Check `references/troubleshooting.md` and prove behavior before use.
+
 ## Stdlib imports
 
 Use `import "k:<name>"` for `stdlib/<name>.k`.
 
 Reliable on 2.4.8 for common work: `k:map`, `k:dict`, `k:set`, `k:result`,
-`k:option`, `k:list`, `k:string`, `k:sort`, `k:path`, `k:fsx`, `k:json_emit`,
+`k:option`, `k:list`, `k:string`, `k:path`, `k:fsx`, `k:json_emit`,
 `k:csv`, `k:collections`, `k:math_utils`, `k:args`, `k:env`, `k:ansi`.
 
-Test before relying on: `k:fp` and any closure-based helper (broken with
+Test before relying on: `k:sort`, padding, `k:fp` and any closure-based helper (broken with
 2.4.8 closures), `k:time`, `k:random`, `k:url`, `k:datetime`, and
 platform-specific modules such as `k:cocoa`, `k:okui`, `k:winsock`.
 
@@ -323,7 +337,7 @@ Full catalog and APIs: `references/stdlib.md`.
 | `Objective-K:` at runtime | Bad handle, unknown method, or wrong argument count |
 | Window opens, controls dead | Callback signature or `funcptr` registration is wrong |
 | App exits after last control | `okRun` not called, or `okShow` before setup |
-| Native crash in a callback | Callback used a closure or captured local |
+| Native crash in a callback | Check signature, borrowed object lifetime, native pointers, and unsupported captures |
 | Windows app fails on `k:objk_runtime_macos` | Import is macOS-only; branch or guard |
 
 More: `references/troubleshooting.md`.
@@ -335,5 +349,6 @@ More Objective-K: `references/objective-k.md`.
 - `references/cli.md` — `kcc`, `kr`, flags, project layout, platforms
 - `references/stdlib.md` — builtins and stdlib module catalog
 - `references/objective-k.md` — Objective-K, `k:okui`, AppKit, ownership, Windows
+- `references/appkit-controls.md` — current macOS columns, actions, images, menus, frames
 - `references/troubleshooting.md` — error messages and 2.4.x gotchas
 - `references/caveman-fallback.md` — terse style when caveman is unavailable

@@ -1,0 +1,113 @@
+# Current Objective-K macOS Adapter
+
+Use for AppKit application work after reading the layer/callback boundaries in
+[objective-k.md](objective-k.md). These are development-checkout APIs, not a
+promise about installed 2.4.8, Windows, Linux, or a future release number.
+
+## Establish The Actual Toolchain
+
+From a Krypton checkout:
+
+```sh
+export KRYPTON_ROOT="$PWD"
+./bootstrap/kcc_driver_macos_aarch64 examples/objk/table_filter.ks -o /tmp/objk-table-filter
+```
+
+Inspect `stdlib/objk.k` before inventing an API. Both installed and development
+drivers may print `2.4.8`; source/function presence and compile probes establish
+availability. Prefer explicit compilation and running the binary when checking
+exit status. `kcc -r` can obscure a failure on older drivers.
+
+## Exact Signatures
+
+| Function | Result / constraint |
+| --- | --- |
+| `okColumn(table,id,title,width)` | Borrowed column; reuse `"c0"` to replace its title/width, add another id for another column. 0 rejects invalid input. |
+| `okColWidth(table,id,width)` | `"1"`/`"0"`; positive integer points, subject to native min/max. |
+| `okRowHeight(table,height)` | `"1"`/`"0"`; positive integer points. |
+| `okOnClick(table,funcptr(fn))` | Handler **`(table)`**, ignored result; 0 detaches. |
+| `okOnDoubleClick(table,funcptr(fn))` | Separate **`(table)`** handler; can coexist with single click. |
+| `okOnKeyDown(table,funcptr(fn))` | Handler `(table,event)`; nonzero consumes, 0 calls the native base method. |
+| `okFieldOnChange(field,funcptr(fn))` | Handler `(field)`; ignored result; 0 detaches; refuses a foreign delegate. |
+| `okMenuCheck(menu,title,on)` | Set checked state by title; missing item returns `"0"`. |
+| `okMenuEnabled(menu,title,on)` | Set enabled state, **turning off auto-validation for the entire menu**. Missing item returns `"0"` without that side effect. |
+| `okImageView(win,x,y,w,h)` | Native aspect-preserving image view. |
+| `okImageFromFile(view,path)` | `"1"` on load, `"0"` on failure; failure preserves previous image. |
+| `okFrameSave(win,key)` | Store geometry in this app's defaults; no lifecycle delegate installed. |
+| `okFrameRestore(win,key)` | Native success result; missing key/nil/empty key or unavailable display fails. |
+| `okWindowShouldClose(win,funcptr(fn))` | Handler `(win)`; integer 1 permits user close, 0 vetoes. |
+| `okWindowOnClose(win,funcptr(fn))` | Handler `(win)`; notification only, ignored result. |
+| `okAppOnOpenFile(app,funcptr(fn))` | Handler `(app,pathText)`; integer 1 handled, 0 rejected. |
+| `okAppOnReopen(app,funcptr(fn))` | Handler `(app,hasVisibleWindows)`; integer 1 permits AppKit default handling, 0 fully handled. |
+
+Generic **`okClick(control,funcptr(fn))` takes `(self,command,sender)`**, unlike
+`okOnClick(table,...)`. Never swap these signatures. Table hooks require an
+`okTable` instance and refuse a foreign action target. Do not mix typed table
+hooks with generic `okClick` or keyed `okOn` on that same table. Native
+double-click processing may also produce a single action; keep single actions
+non-destructive and make double actions safe to follow them.
+
+## Native Values And Ownership
+
+- Selection uses NSIndexSet, not a text list. `okSelection(table)` is an
+  autoreleased immutable snapshot. `okSelectionNew`/`okSelectionAdd` builds a
+  mutable set; `okSelectionAt` returns a row index or empty text out of range.
+- `okDataSource` retains its source; passing 0 detaches. Avoid a source retaining
+  its own table. Table columns and loaded images are retained by their owner.
+- Event, field, and table callback arguments are borrowed. Keep work on the
+  AppKit main thread, keep an autorelease pool, and do not block UI callbacks.
+- `okClass`/`okViewClass` reuse pending class names created by the adapter before
+  registration, reject a conflicting pending parent, and reuse registered names
+  with diagnostics. `okRegister` guards conflicting handles. Native class
+  creation is main-thread-only; this is not a concurrent class registry.
+- Menu state uses existing titles, not menu-item ids. Renaming/removing an item
+  changes lookup. Manual menu validation is a deliberate responsibility change.
+- Frame helpers save/restore only geometry; lifecycle hooks are separate APIs.
+  They do not add single-instance policy, bundling or notarization.
+
+## Lifecycle Boundaries
+
+Window hooks share one retained delegate per window; app hooks share one per
+application. Pointer 0 detaches one hook; the final paired detach clears and
+releases the delegate. Rebinding and callback self-detachment are supported;
+foreign delegates are refused, not forwarded or overwritten. Owners retain
+proxies, proxies do not retain owners. Never release an owner inside a callback.
+
+Direct native `close` bypasses `okWindowShouldClose`; normal `performClose:`
+consults it. Close notification is not a Quit/termination callback. Save on Quit
+separately. To reopen the same window, retain it and set
+`msg_1(win,"setReleasedWhenClosed:",0)` before closing, then use `okShow` from the
+reopen handler. No automatic reconstruction or session manager is supplied.
+
+Register app hooks before `okRun`/`okFinish` to receive launch events. Open-file
+paths are borrowed UTF-8 text, not native NSString handles. Finder routing also
+needs `CFBundleDocumentTypes`; these APIs do not add bundle metadata, sandbox
+access, security-scoped resources, NSDocument integration, multi-file or URL
+delegates. Direct delegate tests are not proof of Finder routing. Missing open
+handlers reject files; missing close/reopen decision handlers allow default
+behavior. Boolean callbacks must return integer 0 or 1, not arbitrary text.
+
+## Verification And Honest Boundaries
+
+```sh
+./bootstrap/kcc_driver_macos_aarch64 -r scripts/check_objk_runtime_macos.ks
+```
+
+Native tests cover column geometry, independent actions, nil/duplicate class
+guards, pending-name reuse, menu validation and image-load failure preservation.
+Frame persistence needs a desktop display; tests explicitly skip it when none
+is available. Check for skips and rerun with display access before claiming it
+verified. Target/action tests alone do not prove real double-click gesture timing;
+the two-column demo's actual single/double clicks and retained-window close/reopen
+were verified separately. Open-file tests invoke the delegate directly, not Finder.
+
+Current source docs: `docs/objective_k.md`, `docs/objk_appkit_events_macos.md`,
+`docs/objk_cortex_followup.md` and `docs/objk_synapse_followup.md`. The latter two
+are task trackers; requested signatures there are not implemented APIs.
+
+Still open unless proven in the target revision: drag/drop, termination/session
+restoration, Finder document routing, async/cancellable processes, imported
+`objk object`/`objk protocol`
+declarations, richer source-location diagnostics and compiler padding/sort/
+split defects. Do not add Objective-C/C source or an external compiler to hide
+missing support; implement or diagnose the missing Krypton adapter/API.

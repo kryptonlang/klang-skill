@@ -9,7 +9,8 @@ rediscovering the language, CLI, and common failures every session.
 
 Objective-K coverage tracks the source checkout. Published macOS 2.4.8 ships
 the core `k:okui` facade and K-owned runtime; newer table, selection, keyboard,
-and live-field APIs are still being prepared for 2.4.9. Re-check version notes
+live-field, column/action, image/menu/frame and lifecycle APIs are development
+checkout features for a future release. Re-check version notes
 before treating a checkout-only API as released.
 
 ## Contents
@@ -27,6 +28,7 @@ klang-skill/
         ├── cli.md
         ├── stdlib.md
         ├── objective-k.md
+        ├── appkit-controls.md
         ├── troubleshooting.md
         └── caveman-fallback.md
 ```
