@@ -88,6 +88,10 @@ or comments.
   K-owned integer field, or persist it across platform boundaries.
 - **UI callbacks are `funcptr(namedFunction)`.** They are not closures and
   cannot capture locals. Match the exact callback signature.
+- **Do not name bindings/parameters `callback`, `process`, `go`, `fn` or
+  `default`.** These are keywords. The development frontend rejects them;
+  older frontends can silently substitute empty text. Use `handlerBox`,
+  `scanning` or `fallback`. Rebuild the frontend/driver, not only stdlib.
 - **2.4.8 ships `k:okui`, `k:objk`, and `k:objk_runtime_macos`.** Checkout-only
   additions include table model/selection hooks, `okOnKeyDown`, live-field
   changes, segmented controls, columns, independent table actions, menu/image/

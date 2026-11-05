@@ -20,6 +20,15 @@ exit status. `kcc -r` can obscure a failure on older drivers.
 
 ## Exact Signatures
 
+The current rebuilt macOS driver propagates `-r`/`-e` child status/streams,
+keeps `--ir` diagnostics on stderr, and preserves old output on failed builds.
+Use `scripts/check_macos_driver.ks` to prove that behavior in the target checkout;
+older 2.4.8 binaries do not gain it through `KRYPTON_ROOT` alone. Function-only
+modules support imports/IR; only executable builds need `just run`/`go run`.
+Bare `void` is invalid: use `-> do`. Keyword binding/parameter names are errors,
+not contextual aliases. Current focused verification is 101 checks; padding,
+sorting, lossless splitting and full release packaging remain open.
+
 | Function | Result / constraint |
 | --- | --- |
 | `okColumn(table,id,title,width)` | Borrowed column; reuse `"c0"` to replace its title/width, add another id for another column. 0 rejects invalid input. |
