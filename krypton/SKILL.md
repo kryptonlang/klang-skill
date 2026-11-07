@@ -19,7 +19,8 @@ metadata:
 Krypton is a self-hosting language with string-oriented values and native
 guarded integers, float boxes, and opaque handles. It
 compiles directly to native ELF, PE, or Mach-O. No C compiler is involved
-for normal builds. Current release line: **2.4.x** (2.4.8 on macOS arm64).
+for normal builds. Current release line: **2.4.x** (2.4.9 on macOS arm64,
+2.4.4 on Linux x86_64, 2.3.0 on Windows; editor extension remains 2.4.8).
 
 Source: <https://github.com/t3m3d/krypton> · Docs: <https://krypton-lang.org>
 

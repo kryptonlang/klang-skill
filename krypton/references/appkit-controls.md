@@ -26,7 +26,7 @@ Use `scripts/check_macos_driver.ks` to prove that behavior in the target checkou
 older 2.4.8 binaries do not gain it through `KRYPTON_ROOT` alone. Function-only
 modules support imports/IR; only executable builds need `just run`/`go run`.
 Bare `void` is invalid: use `-> do`. Keyword binding/parameter names are errors,
-not contextual aliases. macOS 2.4.9 source fixes native padding/arity/module
+not contextual aliases. macOS 2.4.9 fixes native padding/arity/module
 precedence and signed conversion. Sorting and lossless splitting remain open.
 Release packaging must be verified separately from source tests.
 

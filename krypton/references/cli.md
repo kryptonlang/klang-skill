@@ -28,7 +28,7 @@ kr                  # REPL
 
 ## Commands
 
-The macOS 2.4.9 candidate preserves `-r` argument boundaries, empty arguments
+The macOS 2.4.9 release preserves `-r` argument boundaries, empty arguments
 and literal shell syntax. It propagates child status/streams. Older drivers do
 not gain these fixes through a stdlib override; rebuild or install the driver.
 
