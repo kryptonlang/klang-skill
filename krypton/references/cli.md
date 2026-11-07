@@ -28,6 +28,10 @@ kr                  # REPL
 
 ## Commands
 
+The macOS 2.4.9 candidate preserves `-r` argument boundaries, empty arguments
+and literal shell syntax. It propagates child status/streams. Older drivers do
+not gain these fixes through a stdlib override; rebuild or install the driver.
+
 | Command | Purpose |
 |---|---|
 | `kcc file.k` | Compile to a native binary named after the source file |

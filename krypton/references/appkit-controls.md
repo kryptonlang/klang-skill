@@ -26,8 +26,19 @@ Use `scripts/check_macos_driver.ks` to prove that behavior in the target checkou
 older 2.4.8 binaries do not gain it through `KRYPTON_ROOT` alone. Function-only
 modules support imports/IR; only executable builds need `just run`/`go run`.
 Bare `void` is invalid: use `-> do`. Keyword binding/parameter names are errors,
-not contextual aliases. Current focused verification is 101 checks; padding,
-sorting, lossless splitting and full release packaging remain open.
+not contextual aliases. macOS 2.4.9 source fixes native padding/arity/module
+precedence and signed conversion. Sorting and lossless splitting remain open.
+Release packaging must be verified separately from source tests.
+
+For Cortex-style panes, use `okScrollFrame(document,x,y,w,h)` and
+`okScrollHidden(document,hidden)` on the enclosing scroll container; non-scroll
+views return "0". `okViewWidth`/`okViewHeight` use the NSRect return ABI.
+`okSameHandle(a,b)` compares pointer identity; generic equality is not safe for
+native pointers. `okCopyText(text)` creates an independent Krypton snapshot;
+`okObjectText(object)` copies the description (nil becomes empty). Copy before
+mutation/pool drain and keep snapshots rooted in stack locals/globals. Raw
+`sbToString` interior pointers can be reclaimed by `gcCollect`; this is not
+fixed by merely retaining the text pointer, nor do snapshots add transitive GC.
 
 | Function | Result / constraint |
 | --- | --- |

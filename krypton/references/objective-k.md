@@ -57,11 +57,13 @@ KRYPTON_ROOT="$PWD" ./bootstrap/kcc_driver_macos_aarch64 \
 /tmp/objk-counter
 ```
 
-Compiling produces a bare Mach-O executable. It does not create, sign, or
-notarize a `.app` bundle. The checkout docs mention `scripts/build-objk-app.ks`,
-but that helper is not present in the current tree; package the `.app` manually
-or with your own release step. Do not claim a bundle was produced when only the
-executable exists.
+Compiling produces a bare Mach-O executable. The 2.4.9 checkout restores
+`scripts/build-objk-app.ks`: run it through `kcc -r` with source and app name,
+optionally `--out path.app --id identifier --version major.minor.patch
+--icon path.icns --compiler path`. The helper checks builds and creates an
+ad-hoc-signed bundle; Developer ID signing/notarization are separate release
+steps. kweb also embeds its CLI/compiler payload. Do not claim App Store
+readiness from an ad-hoc bundle or a bare executable.
 
 ## App-facing API: `k:okui`
 

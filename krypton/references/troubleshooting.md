@@ -291,10 +291,10 @@ the model, clear or remap selection before `okReload`.
 
 ### App bundle not produced
 
-Compiling creates a bare executable. It does not create a `.app` bundle. The
-checkout docs mention `scripts/build-objk-app.ks`, but that helper is not
-present in the current tree. Package the bundle manually or with your own
-release step.
+Compiling creates a bare executable. In the 2.4.9 checkout use the restored
+`kcc -r scripts/build-objk-app.ks source.ks AppName` helper for an ad-hoc-signed
+bundle. `--out`, `--id`, `--version`, `--icon` and `--compiler` are explicit
+options. Developer ID signing and notarization are separate release steps.
 
 ```sh
 KRYPTON_ROOT="$PWD" ./bootstrap/kcc_driver_macos_aarch64 \
