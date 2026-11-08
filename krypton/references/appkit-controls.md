@@ -1,8 +1,8 @@
 # Current Objective-K macOS Adapter
 
 Use for AppKit application work after reading the layer/callback boundaries in
-[objective-k.md](objective-k.md). These are development-checkout APIs, not a
-promise about installed 2.4.8, Windows, Linux, or a future release number.
+[objective-k.md](objective-k.md). These APIs ship in released macOS arm64
+2.4.9. They are not a Windows/Linux parity claim; 2.4.8 is the older release.
 
 ## Establish The Actual Toolchain
 
@@ -13,10 +13,10 @@ export KRYPTON_ROOT="$PWD"
 ./bootstrap/kcc_driver_macos_aarch64 examples/objk/table_filter.ks -o /tmp/objk-table-filter
 ```
 
-Inspect `stdlib/objk.k` before inventing an API. Both installed and development
-drivers may print `2.4.8`; source/function presence and compile probes establish
-availability. Prefer explicit compilation and running the binary when checking
-exit status. `kcc -r` can obscure a failure on older drivers.
+Inspect `stdlib/objk.k` before inventing an API. Pin the intended `KRYPTON_ROOT`
+and verify the 2.4.9 driver/frontend/stdlib together; a version string alone
+does not identify every selected component. Prefer explicit compilation when
+separating build/run failures. Older 2.4.8 drivers can obscure run failures.
 
 ## Exact Signatures
 
@@ -121,13 +121,13 @@ verified. Target/action tests alone do not prove real double-click gesture timin
 the two-column demo's actual single/double clicks and retained-window close/reopen
 were verified separately. Open-file tests invoke the delegate directly, not Finder.
 
-Current source docs: `docs/objective_k.md`, `docs/objk_appkit_events_macos.md`,
-`docs/objk_cortex_followup.md` and `docs/objk_synapse_followup.md`. The latter two
-are task trackers; requested signatures there are not implemented APIs.
+Public source docs: `docs/objective_k.md`, `docs/objk_appkit_events_macos.md`,
+`docs/objk_runtime_macos.md` and `spec.md`. Local handoffs are not a public API
+reference; a requested signature is not proof of implementation.
 
 Still open unless proven in the target revision: drag/drop, termination/session
 restoration, Finder document routing, async/cancellable processes, imported
 `objk object`/`objk protocol`
-declarations, richer source-location diagnostics and compiler padding/sort/
-split defects. Do not add Objective-C/C source or an external compiler to hide
+declarations, richer source-location diagnostics, sorting and lossless
+splitting. Native padding is fixed in 2.4.9. Do not add Objective-C/C source or an external compiler to hide
 missing support; implement or diagnose the missing Krypton adapter/API.

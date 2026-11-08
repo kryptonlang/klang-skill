@@ -3,12 +3,12 @@
 Objective-K is Krypton's object and native-application layer. It is not a
 separate compiler or interpreter. `.k` and `.ks` use the same `kcc`.
 
-**Version boundary:** published macOS 2.4.8 contains `k:okui`, `k:objk`, and
-the K-owned runtime (`k:objk_runtime_macos`). The table model/selection,
-keyboard hooks, live-field changes, `okSegmented`, and
-`k:objk_process_macos` in this document come from unreleased checkout work.
-Use the checkout driver and stdlib for those, and verify symbols before
-promising them. Check `kcc --version` first.
+**Release baseline:** macOS arm64 **2.4.9 is released**. It ships `k:okui`,
+`k:objk`, the K-owned runtime, table selection/key/live-field hooks, segmented
+controls, column/actions, lifecycle hooks, text snapshots and synchronous
+`k:objk_process_macos`. Older 2.4.8 does not contain all these additions.
+Pin matching driver/frontend/stdlib files and verify actual symbols when using
+a different revision. This does not claim Windows/Linux parity.
 
 ## Three layers
 
@@ -38,7 +38,7 @@ export KRYPTON_ROOT="$PWD"
 
 Use the explicit driver path; Apple ships an unrelated Kerberos `kcc`.
 
-Compile checks that do not open a window:
+Model and adapter checks:
 
 ```sh
 KRYPTON_ROOT="$PWD" ./bootstrap/kcc_driver_macos_aarch64 -r tutorial/macos/02_owned_model.k
@@ -70,7 +70,7 @@ readiness from an ad-hoc bundle or a bare executable.
 For the newer macOS-only column, single/double action, menu-state, image-view,
 frame-persistence, close/open-file/reopen and pending-class safety contracts, read
 [appkit-controls.md](appkit-controls.md). Verify these functions exist in the
-target checkout; the unchanged `2.4.8` version string does not prove availability.
+target installation; selecting an old root can hide APIs despite a newer driver.
 
 `k:okui` is the preferred app surface. On macOS it pulls in `k:objk`,
 `k:choc_macos`, and `k:okui_core`. On Windows it pulls in `k:objkwin` and
@@ -253,7 +253,7 @@ platforms. Use the theme words instead.
 
 ## macOS AppKit: tables, selection, keyboard
 
-These APIs are macOS-specific and newer than published 2.4.8.
+These APIs ship in macOS 2.4.9 and are not portable merely because they use `ok*` names.
 
 ### Table model and selection
 
@@ -454,6 +454,10 @@ Fields hold integers in `[-1000000000, 1000000000]` or arena handles. Each new
 object starts with reference count `1`. Final release tombstones the object;
 later field access, messages, retain, or release are rejected.
 
+`okKAlive(runtime,obj)` is an assertion that returns the live handle; it is not
+a Boolean dead-handle query. Calling it after final release terminates with an
+`Objective-K: object released` diagnostic. Test rejection in a separate process.
+
 Owned/weak fields keep their policy. Update them with `doKOwn`/`doKWeak`, not
 `doKSet`. Assigning a borrowed slot with either reference API establishes its
 policy. Strong cycles are not collected; break them explicitly or use weak
@@ -617,6 +621,6 @@ Docs:
 6. Balance object retain/release. Break cycles with weak links or `doKOwn(..., 0)`.
 7. Keep the runtime arena reachable for all handle lifetimes.
 8. Do not mix handles from different runtimes.
-9. Test the exact checkout and release. Published 2.4.8 lacks the new AppKit
-   APIs.
+9. Test the exact checkout or installation. Released macOS 2.4.9 includes the
+   additions here; older 2.4.8 is not a substitute.
 10. Do not claim Windows parity for macOS-only APIs.

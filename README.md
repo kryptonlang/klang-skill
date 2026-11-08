@@ -1,17 +1,18 @@
 # Klang skill
 
-> **Status: work in progress.** This is a skill we are preparing. It is not
-> released. Instructions, APIs, and version notes may change.
+Agent guidance for **released macOS arm64 Krypton 2.4.9**, with separate
+Linux/Windows version boundaries. This package does not install the compiler.
 
 Portable skill package for coding agents. The current skill teaches an agent
 how to write, run, and debug Krypton (`.k` / `.ks`) programs without
 rediscovering the language, CLI, and common failures every session.
 
-Objective-K coverage tracks the source checkout. Published macOS 2.4.8 ships
-the core `k:okui` facade and K-owned runtime; newer table, selection, keyboard,
-live-field, column/action, image/menu/frame and lifecycle APIs are development
-checkout features for a future release. Re-check version notes
-before treating a checkout-only API as released.
+macOS 2.4.9 ships the Objective-K/AppKit table, selection, keyboard, live-field,
+column/action, image/menu/frame, lifecycle and text-snapshot APIs described here.
+The skill also covers native ABI boundaries, source/install-root selection,
+process capture, K-owned models, bundles and release verification. It includes
+copyable Krypton starters and a local test runner. Future checkout changes still
+need capability checks; Windows/Linux parity is not implied.
 
 ## Contents
 
@@ -24,6 +25,9 @@ klang-skill/
     ├── agents/
     │   └── openai.yaml     # Codex metadata
     └── references/
+        ├── macos.md
+        ├── macos-ffi.md
+        ├── macos-release.md
         ├── language.md
         ├── cli.md
         ├── stdlib.md
@@ -37,6 +41,18 @@ klang-skill/
 and is loaded only when needed. `references/objective-k.md` is the deep dive
 for native macOS apps, AppKit tables and events, the K-owned runtime, and the
 Windows backend differences.
+
+`krypton/assets/macos/` holds data, model, Foundation, process and native-app
+examples. From this repository, test against a chosen source or release root:
+
+```sh
+KRYPTON_ROOT=/absolute/path/to/krypton bash krypton/scripts/check-macos.sh
+```
+
+Add `--bundle` for an ad-hoc bundle check when the root contains the bundler
+source. The default test compiles but does not launch the GUI; real interaction
+is a separate check. The runner does not install/upgrade the compiler or publish
+anything. See `krypton/references/macos.md` for pkg and Homebrew root selection.
 
 ## Install
 
@@ -98,5 +114,6 @@ Exact syntax depends on the agent. Restart or reload after installing.
 - Keep `SKILL.md` under a few hundred lines.
 - Add new failure modes to `references/troubleshooting.md`.
 - Add new stdlib modules to `references/stdlib.md` only after testing them.
-- Re-test closure, time, random, URL, datetime, and Objective-K notes on each
-  release, especially 2.4.9.
+- Re-test capabilities against both the source checkout and an unpacked release
+  with `KRYPTON_ROOT` pinned. Keep fixed 2.4.9 issues separate from older notes.
+- Do not claim full platform/ABI/security coverage from compiling a window.

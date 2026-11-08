@@ -1,10 +1,11 @@
 # Krypton language reference
 
-Krypton is a dynamic, string-valued language. `.k` and `.ks` share the same
+Krypton has string-oriented dynamic semantics plus native integers, float boxes,
+buffers and opaque handles. `.k` and `.ks` share the same
 syntax and compiler. The extension is a naming convention:
 
-- `.k` — library or compiled program. Use a `module` declaration and an
-  explicit `just run { ... }` entry point.
+- `.k` — library or compiled program. Libraries can use a `module` declaration
+  and omit the entry point; executables need `just run { ... }`.
 - `.ks` — KryptScript. Intended to run directly. `kr` auto-wraps a bare
   script in `just run { ... }`. `kcc` does not.
 
@@ -19,7 +20,7 @@ Useful source files in the repository:
 ## Program shape
 
 ```krypton
-module mymodule          // optional; required for multi-file projects
+module mymodule          // optional annotation
 import "k:map"           // optional imports
 
 struct Point {           // optional declarations
@@ -38,14 +39,14 @@ just run {               // entry point; exactly one per program
 
 `just run` and `go run` are equivalent. Library modules omit the entry block.
 
-For a multi-file project, put the entry block in `run.k` and give files the
-same `module` name:
+For a multi-file project, put the entry block in one executable file and import
+function-only helpers. For example:
 
 ```text
 myproject/
-  run.k        module myproject
-  parser.k     module myproject
-  render.k     module myproject
+  run.k        executable entry
+  parser.k     module parser
+  render.k     module render
 ```
 
 Single-file scripts without a `module` declaration are exempt from the
@@ -53,11 +54,12 @@ Single-file scripts without a `module` declaration are exempt from the
 
 ## Values
 
-All runtime values are strings. Two opt-in escapes exist: typed pointers and
-closures.
+Do not assume runtime values are all strings. Native integers, float boxes,
+buffers, code pointers and Apple object handles need their own contracts.
+Closures appearing in the grammar are not evidence that they run on macOS.
 
 ```krypton
-let x = 42          // "42"
+let x = 42          // native backends can hold this as an integer
 let name = "Krypton"
 let flag = true     // "true"
 let no = false      // "false"

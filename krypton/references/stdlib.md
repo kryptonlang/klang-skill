@@ -1,6 +1,7 @@
 # Krypton builtins and stdlib
 
-All values are strings unless a typed-pointer or closure feature is used.
+Values are string-oriented, but native integers, float boxes and opaque buffers/
+handles coexist with text. Do not apply string functions to a native pointer.
 Builtins are called like ordinary functions. Stdlib modules are imported with
 `import "k:<name>"`.
 
@@ -19,7 +20,7 @@ grep -E '^(export )?func ' "$KRYPTON_ROOT/stdlib/<name>.k"
 | `print(s)` / `kp(s)` | Print `s` and a newline |
 | `printErr(s)` | Print to stderr |
 | `readLine(prompt)` | Print prompt, read one line |
-| `scan(prompt)` | Stdlib line-input helper |
+| `scan(prompt)` | Canonical line-input contract |
 | `get()` / `getEcho()` | Single-key contracts; stdlib fallback reads a line |
 | `input()` | Read a line with no prompt |
 
@@ -50,7 +51,7 @@ For paths, directories, and portable file operations, use `k:fsx` and
 | `contains(s, sub)` | `"1"` / `"0"` |
 | `indexOf(s, sub)` | Position or `"-1"` |
 | `replace(s, old, new)` | Replace all |
-| `trim(s)` | Strip surrounding whitespace |
+| `trim(s)` | Native trimming is not a Unicode/CR/LF-normalization guarantee; explicitly chomp shell output |
 | `toUpper(s)` / `toLower(s)` | Case conversion |
 | `reverse(s)` | Byte reversal |
 | `repeat(s, n)` | Repeat |
@@ -76,8 +77,10 @@ For paths, directories, and portable file operations, use `k:fsx` and
 | `hex(n)` / `bin(n)` | Base representation |
 | Float helpers | `toFloat`, `fadd`, `fsub`, `fmul`, `fdiv`, `fformat`, `fsqrt`, `feq`, `flt`, `fgt` |
 
-Remember the 1 GiB smart-int limit on native backends. For larger arithmetic,
-use the 64-bit helpers or treat numbers as text.
+Native integer/pointer heuristics differ by operation and backend; do not infer
+general 64-bit arithmetic from small-number tests. Keep large values as text or
+use a verified sized-buffer operation. In particular, never parse a native
+pointer or `NSNotFound` as text. K-owned fields have their own narrower range.
 
 ### Lists
 
@@ -98,8 +101,9 @@ Lists are comma-separated strings.
 | `listIndexOf(list, item)` | Position or `"-1"` |
 | `sumList(list)` / `minList(list)` / `maxList(list)` | Reductions |
 
-Prefer `k:list`, `k:list_utils`, `k:collections`, and `k:sort` for more
-operations and predictable behavior.
+Library names are not guarantees: macOS `sort` has ineffective cases, and
+comma-list sorting is not newline-record sorting. Test the representation and
+output order before relying on a helper.
 
 ### Maps and structs
 
@@ -126,8 +130,10 @@ operations and predictable behavior.
 | `sbAppend(sb, s)` | Append; returns builder |
 | `sbToString(sb)` | Final text |
 
-Use a builder for append-heavy loops and whenever numeric tokens must stay
-text.
+Use a builder for append-heavy loops and exact text fragments. `sbAppend`
+expects text; use interpolation such as `` `{number}` `` when converting a raw
+integer, not an assumed `toStr` serializer. `sbToString` borrows interior storage;
+copy with `okCopyText` before mutation/collection when persistent text is needed.
 
 ### Lines
 
@@ -148,8 +154,9 @@ text.
 
 ## Stdlib catalog
 
-These modules were present and importable on 2.4.8. Function names and
-behavior vary by release; check `stdlib/<name>.k`.
+This is a discovery catalog, not an all-platform or all-functions test result.
+Check `stdlib/<name>.k` and compile a probe on the actual 2.4.9 macOS root.
+Some entries below are platform-specific or have historical defects.
 
 ### Data structures
 
@@ -194,8 +201,8 @@ behavior vary by release; check `stdlib/<name>.k`.
 | `k:os` | `osgetcwdk`, `osgetenvk`, `ospathjoink`, `ospathexistsk`, `oslistdirk`, `osmkdirk`, `osremovek`, `osrenamek` |
 | `k:env` | `env`, `hasEnv`, `envOr`, `envInt`, `envBool`, `pathDirs` |
 | `k:args` | `argN`, `hasFlag`, `optValue`, `positional`, `countPositional`, `restFrom`, `allArgs` |
-| `k:proc` | `procSpawn`, `procWrite`, `procRead`, `procReadAvail`, `procAlive`, `procClose`, `procSleep` |
-| `k:settings` | `settingsDir`, `settingsPath`, `settingsLoad`, `settingsSave`, `settingsGet` |
+| `k:proc` | Process helper names; inspect platform bindings before using on macOS, prefer `k:objk_process_macos` for verified synchronous capture |
+| `k:settings` | Existing implementation reaches Windows APIs; not a drop-in macOS settings module. Use native defaults or an app-owned format |
 
 ### Math, time, and randomness
 
@@ -240,21 +247,21 @@ behavior vary by release; check `stdlib/<name>.k`.
 | `k:choc_macos` / `k:choc` | macOS / Windows | Native adapters behind `k:okui` |
 | `k:objk_layout` | macOS + Windows | Layout rectangle helpers |
 
-`k:okui` is the portable app surface. 2.4.8 ships `k:okui`, `k:objk`, and the
-K-owned runtime. Newer checkout-only additions include table model/selection,
-key hooks, live-field changes, `okSegmented`, and `k:objk_process_macos`. See
-`objective-k.md`.
+`k:okui` is the app facade, not a platform-parity promise. Released macOS 2.4.9
+includes table model/selection, key/live-field hooks, segmented controls,
+lifecycle hooks, scroll layout, text snapshots and process capture. See
+`objective-k.md` and `appkit-controls.md` for the exact contracts.
 
 ## Version-specific warnings
 
-These were observed on the installed 2.4.8 macOS build. Test again on newer
-releases before treating them as permanent.
+Historical observations below came from 2.4.8. Keep them separate from verified
+2.4.9 fixes; do not carry an old workaround forward without a probe.
 
 | Area | Symptom | Workaround |
 |---|---|---|
 | Closures / `k:fp` | `unknown function 'cb'` or `'f'` | Use named functions and loops |
 | `k:random.randomString` | Process dies after the first print | Avoid, or implement with `k:math_utils` and a seed |
-| `k:url.urlEncode` | Corrupted output such as `a%p?b` | Percent-encode manually |
+| `k:url.urlEncode` | Earlier corrupted character conversion | Fixed/tested on macOS 2.4.9; use the shipped module, not a handwritten encoder |
 | `k:datetime.dtYear("2026-11-05")` | Returns `1970` | Pass the expected ISO datetime form, or parse manually |
 | `k:time` | `unknown function 'GetTickCount64'` on macOS | Use `k:datetime` or platform-specific code |
 | `k:json_parse.jpGet(jpParse(...))` | Empty result for a simple object | Follow the module's parser-state API, or use `k:json_emit` for output |

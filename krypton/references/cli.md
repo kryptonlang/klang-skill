@@ -40,7 +40,7 @@ not gain these fixes through a stdlib override; rebuild or install the driver.
 | `kcc -e 'print("hi")'` | Compile and run an inline snippet |
 | `kcc --ir file.k` | Emit Krypton IR to stdout |
 | `kcc --aarch64 file.k -o out` | Linux: cross-compile to static aarch64 ELF |
-| `kcc --target T file.k` | Target `ios-sim-arm64`, `ios-device-arm64`, or `windows-x86_64` |
+| `kcc --target T file.k` | Target selection; support/SDK requirements differ by host, see macOS notes |
 | `kcc --subsystem console\|windows` | Windows subsystem |
 | `kr file.ks` | Run a KryptScript file; auto-wraps bare statements |
 | `kr` | Interactive REPL |
@@ -48,7 +48,7 @@ not gain these fixes through a stdlib override; rebuild or install the driver.
 The default pipeline is native:
 
 - Linux: ELF64, direct syscalls, static
-- Windows: PE/COFF, kernel32 only
+- Windows: PE/COFF with backend-supported Windows DLL imports
 - macOS arm64: Mach-O, ad-hoc signed, no clang at user-compile time
 
 The old C escape hatches (`--c`, `--gcc`, `--llvm`) were removed in 2.3 and
@@ -88,7 +88,7 @@ chmod +x script.ks
 ./script.ks
 ```
 
-## Exit status gotcha
+## Exit Status By Version
 
 On 2.4.8, `kcc -r` can print a compiler error and still exit `0`. Use an
 explicit output path when automation depends on success:
@@ -100,6 +100,11 @@ kcc probe.ks -o /tmp/probe && /tmp/probe
 `kcc probe.ks -o /tmp/probe` returns non-zero on codegen failure. Always read
 stderr as well; the backend prefix is usually `macho_arm64_self:`,
 `elf:`, or `x64:`.
+
+Released macOS 2.4.9 fixes this: `-r`/`-e` preserve child status and streams;
+`-r` preserves spaces, quotes, empty arguments and literal shell syntax. Failed
+compiles preserve earlier output binaries, so execute only after a successful
+compile. IR mode keeps frontend diagnostics on stderr, not in the IR stream.
 
 ## Source checkout
 
@@ -121,14 +126,15 @@ task.
 
 ## Multi-file projects
 
-Use one `module` declaration on every file and put the entry block in
-`run.k`:
+Put the entry block in one executable file and functions in imported libraries.
+Module names are optional annotations, not a requirement to use the same name
+in every file or a general package namespace. One possible layout is:
 
 ```text
 myproject/
-  run.k        module myproject
-  parser.k     module myproject
-  render.k     module myproject
+  run.k        executable entry
+  parser.k     module parser
+  render.k     module render
 ```
 
 `run.k`:
@@ -142,14 +148,15 @@ just run {
 }
 ```
 
-Single-file scripts without a `module` declaration can keep the entry block
-in the same file.
+Function-only modules import and emit IR without an entry point. Compiling one
+as an executable diagnoses the missing entry. Keep compiler `objk` declarations
+in the executable file; imported declarations are a separate unsupported case.
 
 ## Imports and roots
 
 ```krypton
 import "k:map"           // <KRYPTON_ROOT>/stdlib/map.k
-import "head:user32"     // <KRYPTON_ROOT>/headers/user32.krh
+import "head:objc"       // macOS: <KRYPTON_ROOT>/headers/objc.krh
 import "lib/util.k"      // relative to the importing file
 ```
 
@@ -164,10 +171,10 @@ If stdlib imports fail:
 
 | Platform | Status | Notes |
 |---|---|---|
-| macOS arm64 | Current 2.4.8 | Native Mach-O, ad-hoc signing |
+| macOS arm64 | Released 2.4.9 | Native Mach-O; compiler outputs are ad-hoc signed; release artifacts use Developer ID |
 | Linux x86_64 | 2.4.4 | Native ELF, static, direct syscalls |
-| Windows x86_64 | 2.3.0 | Native PE/COFF, kernel32 only |
-| Linux arm64 | C path only | No native ELF arm64 backend; cross-compile with `--aarch64` from x86_64 |
+| Windows x86_64 | 2.3.0 | Native PE/COFF; no claim of macOS adapter parity |
+| Linux arm64 | Cross target | Use the supported Linux x86_64 cross pipeline; no claim of a shipped native arm64-host install |
 
 Platform-specific stdlib modules exist (`k:cocoa`, `k:okui` on macOS,
 `k:winsock`, `k:conpty_win` on Windows). Do not import them in portable code
@@ -186,8 +193,13 @@ kcc /tmp/probe.ks -o /tmp/probe && /tmp/probe
 kcc --ir /tmp/probe.ks | head -40
 ```
 
-For a repository test suite (compiler development), use `./build.sh test`.
-That is outside normal language use.
+For macOS compiler development, use the strict gates
+`scripts/check_macos_native.ks`, `scripts/check_macos_driver.ks` and
+`scripts/check_objk_runtime_macos.ks`. The older `build.sh test` tolerates some
+nonzero exits and is not equivalent. This is separate from testing an app.
+
+Root selection, installed layouts, `kr`, iOS boundaries and CLI probes:
+[macos.md](macos.md). Bundles/signing: [macos-release.md](macos-release.md).
 
 ## Cleaning up
 
