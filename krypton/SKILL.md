@@ -70,6 +70,8 @@ Source: <https://github.com/t3m3d/krypton> · Site: <https://krypton-lang.org>
   text operations to a native pointer or persist that pointer as text.
 - `+` can perform numeric addition on numeric-looking text. Build exact text
   using string fragments/builders, and convert integer values deliberately.
+- Use `!=` for inequality. `is not` is prose, not a Krypton operator on the
+  current compiler baseline.
 - Lists are legacy comma-delimited text, not lossless arrays. `split(list,i)`
   indexes that representation; it does not split text on an arbitrary delimiter.
 - Text lengths/indices are bytes, not Unicode characters. Text is
@@ -85,6 +87,10 @@ Source: <https://github.com/t3m3d/krypton> · Site: <https://krypton-lang.org>
 - macOS 2.4.9 fixes padding, signed conversion, URL character conversion,
   checked build outputs, and `-r`/`-e` status/streams. Sorting, lossless splitting,
   imported Objective-K declarations and richer diagnostics remain separate work.
+- `--c`, `--gcc`, and `--llvm` are removed. Krypton builds use the native
+  pipeline; do not add a C/Clang application build path.
+- `--kbi` is an opt-in macOS arm64 ABI mode. It is not enabled by default and
+  is not a cross-platform parity claim.
 
 ## Working Program
 
@@ -108,6 +114,12 @@ KCC="$KRYPTON_ROOT/bootstrap/kcc_driver_macos_aarch64"
 preserves literal/empty arguments and child exit status. Explicit `-o` is still
 useful to separate compilation from execution. Never treat a stale executable
 left after a failed compile as the newly built program.
+
+When compiler source changes, rebuild the frontend/backend binaries before
+testing new grammar or enum features. `./build.sh` restores the committed seed;
+it does not rebuild `compiler/compile.k` into a new frontend. Keep the driver,
+frontend, Mach-O host, and `KRYPTON_ROOT` on the same checkout. A stale frontend
+can falsely report `expected '{' to start a block` for valid `just run` code.
 
 ## Native Applications
 
